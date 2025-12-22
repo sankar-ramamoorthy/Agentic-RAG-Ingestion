@@ -1,14 +1,16 @@
 services:
   ingestion_service:
     build:
-      context: .          # <-- build from repo root
+      context: .
       dockerfile: src/ingestion_service/Dockerfile
     ports:
       - "8001:8001"
     volumes:
       - ./src/ingestion_service:/app/src/ingestion_service
     environment:
-      - PYTHONPATH=/app/src
+      DATABASE_URL: postgresql://ingestion_user:ingestion_pass@postgres:5432/ingestion_db
+      PYTHONPATH: /app/src
+
   postgres:
     image: postgres:15
     container_name: ingestion-db

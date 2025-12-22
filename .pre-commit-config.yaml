@@ -1,19 +1,19 @@
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.3
     hooks:
       - id: ruff
 
-  # ✅ Custom mypy hook using YOUR uv environment + working config
   - repo: local
     hooks:
-      - id: mypy
-        name: mypy src
-        entry: uv run mypy src
+      - id: pyright
+        name: pyright .
+        entry: uv run pyright .
         language: system
         types: [python]
         pass_filenames: false
+        # Remove additional_dependencies - language: system uses your uv env
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
