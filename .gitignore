@@ -225,3 +225,4 @@ volumes/
 *_backup_*
 *_backup*
 *.tmp
+/volumes

@@ -1,39 +1,30 @@
-# src/ingestion_service/tests/test_db_operations.py
-
+# tests/test_db_operations.py (complete clean file)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.ingestion_service.core.models import IngestionRequest
-# Adjust import according to your structure
+from ingestion_service.core.config import get_settings
+from ingestion_service.core.models import IngestionRequest
 
-DATABASE_URL = "postgresql://ingestion_user:ingestion_pass@postgres:5432/ingestion_db"
-
-# Create the engine and session maker
-engine = create_engine(DATABASE_URL)
+engine = create_engine(get_settings().DATABASE_URL)
 Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Test inserting and fetching a row
-def test_insert_fetch_row():
-    # Create a new session
-    session = Session()
 
-    # Insert a dummy row
+def test_insert_fetch_row():
+    test_uuid = "123e4567-e89b-12d3-a456-426614174000"
+    session = Session()
     new_ingestion = IngestionRequest(
-        ingestion_id="123e4567-e89b-12d3-a456-426614174000",  # Use UUID if you prefer
+        ingestion_id=test_uuid,
         source_type="test_source",
         ingestion_metadata={"key": "value"},
         status="pending",
     )
     session.add(new_ingestion)
     session.commit()
-
-    # Fetch the row back
-    fetched_row = session.query(IngestionRequest) \
-    .filter_by(ingestion_id="123e4567-e89b-12d3-a456-426614174000") \
-    .first()
-
-    # Assert that the fetched row matches the inserted one
+    fetched_row = (
+        session.query(IngestionRequest)
+        .filter(IngestionRequest.ingestion_id == test_uuid)
+        .first()
+    )
     assert fetched_row is not None
-    assert fetched_row.source_type == "test_source"
-    assert fetched_row.status == "pending"
-
+    assert fetched_row.source_type == "test_source"  # type: ignore[reportGeneralTypeIssues]
+    assert fetched_row.status == "pending"  # type: ignore[reportGeneralTypeIssues]
     session.close()
