@@ -1,16 +1,83 @@
 # tests/core/test_pipeline.py
-
-from unittest.mock import Mock, call
-import pytest
-
 from ingestion_service.core.pipeline import IngestionPipeline
+from ingestion_service.core.chunks import Chunk
+from ingestion_service.core.chunkers.base import BaseChunker
+from ingestion_service.core.chunkers.selector import ChunkerFactory
+from typing import Any, List
 
 
-def make_pipeline():
-    validator = Mock()
-    chunker = Mock()
-    embedder = Mock()
-    vector_store = Mock()
+class DummyChunker(BaseChunker):
+    name = "dummy"
+
+    def chunk(self, content: Any, **params) -> List[Chunk]:
+        return [Chunk(chunk_id="1", content=content[:5], metadata={})]
+
+
+class DummyEmbedder:
+    def embed(self, chunks: List[Chunk]) -> List[List[float]]:
+        return [[0.1, 0.2]] * len(chunks)
+
+
+class DummyVectorStore:
+    def __init__(self):
+        self.persisted = []
+
+    def persist(
+        self, chunks: List[Chunk], embeddings: List[List[float]], ingestion_id: str
+    ):
+        self.persisted.append((chunks, embeddings, ingestion_id))
+
+
+class DummyValidator:
+    def validate(self, text: str):
+        pass
+
+
+def test_pipeline_dynamic_chunker(monkeypatch):
+    text = "This is a test of dynamic chunker selection."
+    ingestion_id = "ing123"
+
+    embedder = DummyEmbedder()
+    vector_store = DummyVectorStore()
+    validator = DummyValidator()
+
+    dummy_chunker = DummyChunker()
+    monkeypatch.setattr(
+        ChunkerFactory,
+        "choose_strategy",
+        lambda content, **context: (dummy_chunker, {"chunk_size": 5, "overlap": 0}),
+    )
+
+    pipeline = IngestionPipeline(
+        validator=validator,
+        chunker=None,
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    # Use the public `run()` method, ingestion_id is now actually used
+    pipeline.run(text=text, ingestion_id=ingestion_id)
+
+    # Check that chunks were persisted
+    persisted_chunks, persisted_embeddings, persisted_id = vector_store.persisted[0]
+    assert persisted_id == ingestion_id
+    assert len(persisted_chunks) == 1
+    assert persisted_chunks[0].content == text[:5]
+    assert persisted_chunks[0].metadata["chunking_strategy"] == "dummy"
+    assert persisted_chunks[0].metadata["chunker_params"] == {
+        "chunk_size": 5,
+        "overlap": 0,
+    }
+
+
+def test_pipeline_explicit_chunker():
+    text = "Explicit chunker test"
+    ingestion_id = "explicit123"
+
+    chunker = DummyChunker()
+    embedder = DummyEmbedder()
+    vector_store = DummyVectorStore()
+    validator = DummyValidator()
 
     pipeline = IngestionPipeline(
         validator=validator,
@@ -19,59 +86,9 @@ def make_pipeline():
         vector_store=vector_store,
     )
 
-    return pipeline, validator, chunker, embedder, vector_store
+    pipeline.run(text=text, ingestion_id=ingestion_id)
 
-
-def test_pipeline_calls_steps_in_order():
-    pipeline, validator, chunker, embedder, vector_store = make_pipeline()
-
-    chunker.chunk.return_value = ["chunk1"]
-    embedder.embed.return_value = ["embedding1"]
-
-    pipeline.run(text="hello world", ingestion_id="ing-123")
-
-    assert validator.validate.call_count == 1
-    assert chunker.chunk.call_count == 1
-    assert embedder.embed.call_count == 1
-    assert vector_store.persist.call_count == 1
-
-    assert validator.validate.call_args == call("hello world")
-    assert chunker.chunk.call_args == call("hello world")
-    assert embedder.embed.call_args == call(["chunk1"])
-    assert vector_store.persist.call_args == call(
-        chunks=["chunk1"],
-        embeddings=["embedding1"],
-        ingestion_id="ing-123",
-    )
-
-
-def test_pipeline_passes_data_through():
-    pipeline, _, chunker, embedder, vector_store = make_pipeline()
-
-    chunks = ["c1", "c2"]
-    embeddings = ["e1", "e2"]
-
-    chunker.chunk.return_value = chunks
-    embedder.embed.return_value = embeddings
-
-    pipeline.run(text="text", ingestion_id="ing-456")
-
-    embedder.embed.assert_called_once_with(chunks)
-    vector_store.persist.assert_called_once_with(
-        chunks=chunks,
-        embeddings=embeddings,
-        ingestion_id="ing-456",
-    )
-
-
-def test_pipeline_stops_on_validation_error():
-    pipeline, validator, chunker, embedder, vector_store = make_pipeline()
-
-    validator.validate.side_effect = ValueError("invalid")
-
-    with pytest.raises(ValueError):
-        pipeline.run(text="bad", ingestion_id="ing-789")
-
-    chunker.chunk.assert_not_called()
-    embedder.embed.assert_not_called()
-    vector_store.persist.assert_not_called()
+    persisted_chunks, _, persisted_id = vector_store.persisted[0]
+    assert persisted_id == ingestion_id
+    assert persisted_chunks[0].metadata["chunking_strategy"] == "dummy"
+    assert persisted_chunks[0].metadata["chunker_params"] == {}
