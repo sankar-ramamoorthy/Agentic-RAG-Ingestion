@@ -53,7 +53,7 @@ class PgVectorStore(VectorStore):
         search_sql = f"""
         SELECT vector, ingestion_id, chunk_id, chunk_index, chunk_strategy
         FROM {self._table_name}
-        ORDER BY vector <-> %s
+        ORDER BY vector <-> (%s::vector)
         LIMIT %s
         """
         results: List[VectorRecord] = []
