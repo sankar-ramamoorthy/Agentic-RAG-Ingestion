@@ -14,7 +14,15 @@ from ingestion_service.core.models import Base
 
 # Alembic Config object
 config = context.config
+# Allow overriding DB URL via env var or -x db_url
+db_url = context.get_x_argument(as_dictionary=True).get("db_url") or os.environ.get(
+    "DATABASE_URL"
+)
 
+if not db_url:
+    raise RuntimeError("DATABASE_URL is not set and no -x db_url was provided")
+
+config.set_main_option("sqlalchemy.url", db_url)
 # Set up Python logging from the config file
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

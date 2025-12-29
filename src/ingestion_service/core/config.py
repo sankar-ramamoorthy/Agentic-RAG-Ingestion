@@ -23,3 +23,7 @@ def get_settings() -> Settings:
     treated as a raw constructor call everywhere.
     """
     return Settings()  # type: ignore[reportCallIssue]
+
+
+def reset_settings_cache():
+    get_settings.cache_clear()

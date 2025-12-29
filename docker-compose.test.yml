@@ -2,8 +2,6 @@ services:
   postgres:
     image: pgvector/pgvector:pg15
     container_name: ingestion-db-test
-    ports:
-      - "5433:5432"
     environment:
       POSTGRES_USER: ingestion_user
       POSTGRES_PASSWORD: ingestion_pass
@@ -13,3 +11,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  ingestion_service:
+    build:
+      context: .
+      dockerfile: src/ingestion_service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ingestion_user:ingestion_pass@postgres:5432/ingestion_test
+      PYTHONPATH: /app/src
+    volumes:
+      - ./src/ingestion_service:/app/src/ingestion_service
+    depends_on:
+      postgres:
+        condition: service_healthy
