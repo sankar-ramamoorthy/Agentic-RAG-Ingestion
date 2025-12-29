@@ -1,18 +1,19 @@
 import uuid
-
 import pytest
-
 from ingestion_service.core.vectorstore.base import VectorMetadata, VectorRecord
 from ingestion_service.core.vectorstore.pgvector_store import PgVectorStore
+
+pytest_plugins = ["tests.conftest_db"]
 
 
 @pytest.mark.docker
 @pytest.mark.integration
-def test_pgvector_store_add_search_delete():
-    dsn = (
-        "postgresql://ingestion_user:"
-        "ingestion_pass@localhost:5433/ingestion_test"
-    )
+def test_pgvector_store_add_search_delete(test_database_url):
+    # dsn = (
+    #    "postgresql://ingestion_user:"
+    #    "ingestion_pass@postgres:5432/ingestion_test"
+    # )
+    dsn = test_database_url
 
     store = PgVectorStore(
         dsn=dsn,

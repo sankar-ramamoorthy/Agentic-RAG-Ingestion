@@ -12,7 +12,7 @@ services:
       PYTHONPATH: /app/src
 
   postgres:
-    image: postgres:15
+    image:  pgvector/pgvector:pg15
     container_name: ingestion-db
     restart: unless-stopped
     ports:
