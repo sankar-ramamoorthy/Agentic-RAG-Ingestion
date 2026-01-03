@@ -1,7 +1,7 @@
 # tests/conftest_db.py
 import os
 import pytest
-from psycopg import sql
+from psycopg import sql, connect
 
 # Must be set in the environment before running tests
 # e.g., export DATABASE_URL=postgresql://ingestion_user:ingestion_pass@postgres:5432/ingestion_test
@@ -17,10 +17,8 @@ def test_database_url() -> str:
 def clean_vectors_table(test_database_url):
     """
     Ensure a clean 'vectors' table in 'ingestion_service' schema for each test.
-    Drops the table if exists, then recreates it.
+    Drops the table if exists, then recreates it with full MVP schema.
     """
-    from psycopg import connect
-
     schema = "ingestion_service"
     table = "vectors"
 
@@ -31,7 +29,9 @@ def clean_vectors_table(test_database_url):
             ingestion_id TEXT NOT NULL,
             chunk_id TEXT NOT NULL,
             chunk_index INT NOT NULL,
-            chunk_strategy TEXT NOT NULL
+            chunk_strategy TEXT NOT NULL,
+            chunk_text TEXT NOT NULL,
+            source_metadata JSONB NOT NULL DEFAULT '{}'
         )
     """).format(
         schema=sql.Identifier(schema),
@@ -50,7 +50,7 @@ def clean_vectors_table(test_database_url):
 
     yield  # test runs here
 
-    # Optional cleanup
+    # Optional cleanup after test
     with connect(test_database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(

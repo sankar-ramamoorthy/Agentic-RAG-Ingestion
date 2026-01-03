@@ -1,3 +1,4 @@
+# src/ingestion_service/api/v1/ingest.py
 from uuid import UUID, uuid4
 import json
 from typing import Optional
@@ -17,14 +18,15 @@ from ingestion_service.core.models import IngestionRequest
 from ingestion_service.core.pipeline import IngestionPipeline
 from ingestion_service.core.status_manager import StatusManager
 from ingestion_service.core.embedders.mock import MockEmbedder
-from ingestion_service.core.vectorstore.memory import MemoryVectorStore
+from ingestion_service.core.vectorstore.pgvector_store import PgVectorStore
+from ingestion_service.core.config import get_settings
 
 router = APIRouter(tags=["ingestion"])
 SessionLocal = get_sessionmaker()
 
 
 # ==============================================================
-# MS2 NO-OP VALIDATOR
+# MS2a NO-OP VALIDATOR (SYNC MVP)
 # ==============================================================
 class NoOpValidator:
     def validate(self, text: str) -> None:
@@ -33,17 +35,24 @@ class NoOpValidator:
 
 def _build_pipeline() -> IngestionPipeline:
     """
-    MS2 synchronous pipeline with mock components.
+    MS2a synchronous pipeline with persistent PgVector storage.
     """
+    settings = get_settings()
+
+    vector_store = PgVectorStore(
+        dsn=settings.DATABASE_URL,
+        dimension=3,  # matches MockEmbedder + migration
+    )
+
     return IngestionPipeline(
         validator=NoOpValidator(),
         embedder=MockEmbedder(),
-        vector_store=MemoryVectorStore(),
+        vector_store=vector_store,
     )
 
 
 # ==============================================================
-# JSON INGESTION (CANONICAL CONTRACT — MS2)
+# JSON INGESTION (MS2a MVP)
 # ==============================================================
 @router.post(
     "/ingest",
@@ -79,6 +88,7 @@ def ingest_json(request: IngestRequest) -> IngestResponse:
                 detail="Ingestion pipeline failed",
             ) from exc
 
+    # NOTE: still returns ACCEPTED by contract, even if completed synchronously
     return IngestResponse(
         ingestion_id=ingestion_id,
         status="accepted",
@@ -86,7 +96,7 @@ def ingest_json(request: IngestRequest) -> IngestResponse:
 
 
 # ==============================================================
-# MULTIPART FILE INGESTION (UI ONLY — MS2a)
+# MULTIPART FILE INGESTION (UI / MS2a)
 # ==============================================================
 @router.post(
     "/ingest/file",
@@ -108,7 +118,6 @@ def ingest_file(
 
     ingestion_id = uuid4()
 
-    # Read file content safely
     try:
         text = file.file.read().decode("utf-8")
     except Exception as exc:

@@ -1,3 +1,4 @@
+# tests/vectorstore/test_pgvector_store.py
 import uuid
 import pytest
 from ingestion_service.core.vectorstore.base import VectorMetadata, VectorRecord
@@ -21,6 +22,8 @@ def test_pgvector_store_add_search_delete(clean_vectors_table, test_database_url
             chunk_id=chunk_id,
             chunk_index=0,
             chunk_strategy="test",
+            chunk_text="Test chunk text",
+            source_metadata={},
         ),
     )
 
