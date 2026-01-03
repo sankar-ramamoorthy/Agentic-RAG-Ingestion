@@ -1,4 +1,16 @@
 # src/ingestion_service/core/db/models/vector_embedding.py
+"""
+DEPRECATED / NOT USED IN MS2a.
+
+This model is not wired into the current vector storage pipeline. Live embeddings
+are stored in the `ingestion_service.vectors` table via PgVectorStore (raw psycopg).
+
+This ORM model exists as a possible future direction for unified SQLAlchemy-based
+vector storage, but is currently unused. Do not import or use this model for
+active development.
+
+Current path: core/vectorstore/pgvector_store.py → ingestion_service.vectors table
+"""
 
 import uuid
 from typing import Any

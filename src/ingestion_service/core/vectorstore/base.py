@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Iterable, Sequence, List
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,8 @@ class VectorMetadata:
     chunk_id: str
     chunk_index: int
     chunk_strategy: str
+    chunk_text: str
+    source_metadata: dict | None
 
 
 @dataclass(frozen=True)
@@ -22,25 +24,17 @@ class VectorRecord:
 class VectorStore(ABC):
     @property
     @abstractmethod
-    def dimension(self) -> int:
-        """Expected dimensionality of stored vectors."""
+    def dimension(self) -> int: ...
 
     @abstractmethod
-    def add(self, records: Iterable[VectorRecord]) -> None:
-        """Persist vectors and metadata."""
+    def add(self, records: Iterable[VectorRecord]) -> None: ...
 
     @abstractmethod
     def similarity_search(
         self,
         query_vector: Sequence[float],
         k: int,
-    ) -> list[VectorRecord]:
-        """Return top-k most similar vectors."""
+    ) -> List[VectorRecord]: ...
 
     @abstractmethod
-    def delete_by_ingestion_id(self, ingestion_id: str) -> None:
-        """Remove all vectors associated with an ingestion."""
-
-    @abstractmethod
-    def reset(self) -> None:
-        """Clear store (testing / dev only)."""
+    def delete_by_ingestion_id(self, ingestion_id: str) -> None: ...

@@ -1,3 +1,4 @@
+# tests/vectorstore/test_pgvector_search.py
 import pytest
 
 from ingestion_service.core.vectorstore.base import VectorMetadata, VectorRecord
@@ -23,6 +24,8 @@ def test_pgvector_similarity_search(clean_vectors_table, test_database_url):
                 chunk_id="c1",
                 chunk_index=0,
                 chunk_strategy="fixed",
+                chunk_text="Chunk 1 text",
+                source_metadata={},
             ),
         ),
         VectorRecord(
@@ -32,6 +35,8 @@ def test_pgvector_similarity_search(clean_vectors_table, test_database_url):
                 chunk_id="c2",
                 chunk_index=1,
                 chunk_strategy="fixed",
+                chunk_text="Chunk 2 text",
+                source_metadata={},
             ),
         ),
         VectorRecord(
@@ -41,6 +46,8 @@ def test_pgvector_similarity_search(clean_vectors_table, test_database_url):
                 chunk_id="c3",
                 chunk_index=2,
                 chunk_strategy="fixed",
+                chunk_text="Chunk 3 text",
+                source_metadata={},
             ),
         ),
     ]

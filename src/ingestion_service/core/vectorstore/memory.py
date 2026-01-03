@@ -1,67 +1,69 @@
-# core/vectorstore/memory.py
+# src/ingestion_service/core/vectorstore/memory.py
 from __future__ import annotations
 
-import math
-from typing import Iterable, Sequence
+from typing import Any, List
 
-from ingestion_service.core.vectorstore.base import (
-    VectorRecord,
-    VectorStore,
-)
+from ingestion_service.core.chunks import Chunk
+
+"""
+NON-PERSISTENT VECTOR STORE — LOCAL / TESTING ONLY.
+
+This in-memory vector store exists to support:
+- local development
+- unit tests
+- CI environments without PostgreSQL + pgvector
+
+⚠ IMPORTANT:
+- This store does NOT persist data across process restarts.
+- This store MUST NOT be used in production.
+- MS2/MS2a production vector persistence uses PgVectorStore
+  (core/vectorstore/pgvector_store.py).
+
+This implementation intentionally favors simplicity over performance
+or durability.
+"""
 
 
-def _cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    norm_a = math.sqrt(sum(x * x for x in a))
-    norm_b = math.sqrt(sum(y * y for y in b))
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot / (norm_a * norm_b)
+class MemoryVectorStore:
+    """
+    Simple in-memory vector store for MS2.
 
+    Stores vectors and minimal metadata in a Python list.
+    """
 
-class InMemoryVectorStore(VectorStore):
-    def __init__(self, dimension: int) -> None:
-        self._dimension = dimension
-        self._records: list[VectorRecord] = []
+    def __init__(self) -> None:
+        self._rows: list[dict[str, Any]] = []
 
-    @property
-    def dimension(self) -> int:
-        return self._dimension
-
-    def add(self, records: Iterable[VectorRecord]) -> None:
-        for record in records:
-            if len(record.vector) != self._dimension:
-                raise ValueError(
-                    f"Vector dimension mismatch: "
-                    f"expected {self._dimension}, "
-                    f"got {len(record.vector)}"
-                )
-            self._records.append(record)
-
-    def similarity_search(
+    def persist(
         self,
-        query_vector: Sequence[float],
-        k: int,
-    ) -> list[VectorRecord]:
-        if len(query_vector) != self._dimension:
-            raise ValueError(
-                f"Query vector dimension mismatch: "
-                f"expected {self._dimension}, "
-                f"got {len(query_vector)}"
+        *,
+        chunks: List[Chunk],
+        embeddings: List[Any],
+        ingestion_id: str,
+    ) -> None:
+        """
+        Persist vectors in memory.
+
+        This mirrors the MS2 pipeline contract and is intentionally
+        incompatible with PgVectorStore's VectorRecord-based API.
+
+        DO NOT use this outside local development or tests.
+        """
+        for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+            self._rows.append(
+                {
+                    "ingestion_id": ingestion_id,
+                    "chunk_id": chunk.chunk_id,
+                    "chunk_index": index,
+                    "chunk_strategy": chunk.metadata.get("chunk_strategy"),
+                    "vector": embedding,
+                }
             )
 
-        scored = [
-            (record, _cosine_similarity(query_vector, record.vector))
-            for record in self._records
-        ]
+    def dump(self) -> list[dict[str, Any]]:
+        """
+        Return a shallow copy of all stored vectors.
 
-        scored.sort(key=lambda pair: pair[1], reverse=True)
-        return [record for record, _ in scored[:k]]
-
-    def delete_by_ingestion_id(self, ingestion_id: str) -> None:
-        self._records = [
-            r for r in self._records if r.metadata.ingestion_id != ingestion_id
-        ]
-
-    def reset(self) -> None:
-        self._records.clear()
+        Intended for debugging and assertions in tests.
+        """
+        return list(self._rows)
