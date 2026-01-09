@@ -1,12 +1,9 @@
-
-```
 # OCR Architecture & Design Decisions
 
 ## Context
 
-As part of **MS3 – Image Ingestion and OCR**, the ingestion service must support
-extracting text from images and feeding that text into the existing ingestion
-pipeline:
+As part of **IS4 – Image Ingestion**, the ingestion service must support
+extracting text from images and feeding that text into the ingestion pipeline:
 
 ```
 
@@ -14,12 +11,12 @@ image → OCR → text → chunking → embedding → vector store
 
 ```
 
-There are multiple OCR engines available (e.g. Tesseract, PaddleOCR, cloud OCRs),
+Multiple OCR engines are available (e.g., Tesseract, PaddleOCR, cloud OCRs),
 each with different tradeoffs in accuracy, performance, and operational
 complexity.
 
-This document records the **design options considered**, the **decision taken**,
-and the **rationale** behind that decision.
+This document records the **design options considered**, the **decision taken**, and
+the **rationale** behind that decision.
 
 ---
 
@@ -33,7 +30,7 @@ The OCR design must:
 - Avoid operational complexity during early development
 - Remain compatible with Docker-based integration testing
 
-Non-goals (for MS3):
+Non-goals:
 
 - GPU optimization
 - Layout-aware OCR (bounding boxes, coordinates)
@@ -48,7 +45,7 @@ Non-goals (for MS3):
 
 **Description**
 
-Each OCR engine runs in its own Docker container and exposes a dedicated API.
+Each OCR engine runs in its own Docker container with a dedicated API.
 The ingestion service calls the appropriate OCR service based on configuration.
 
 **Pros**
@@ -130,6 +127,7 @@ Only **text output** is exposed to the rest of the system.
 > **OCR is a pluggable leaf dependency behind a stable text-only interface.**
 
 The ingestion pipeline never depends on:
+
 - OCR engine internals
 - Image formats
 - OCR confidence scores
@@ -187,14 +185,14 @@ If an OCR provider is requested but unavailable:
 
 ## Docker Strategy
 
-### Current State (MS3)
+### Current State
 
-* One Docker container: `ingestion_service`
+* Single Docker container: `ingestion_service`
 * OCR engines installed as libraries
 * CPU-only execution
 * Tesseract implemented first
 
-### Future State (Post-MS3)
+### Future State
 
 If GPU-based OCR is required:
 
@@ -254,5 +252,3 @@ This design:
 * Allows gradual evolution toward GPU or cloud OCR
 
 The system remains **simple now**, while staying **flexible later**.
-
----
