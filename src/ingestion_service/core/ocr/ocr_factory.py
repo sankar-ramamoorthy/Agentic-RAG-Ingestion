@@ -5,10 +5,15 @@ from typing import Dict
 
 from ingestion_service.core.ocr.ocr import OCRExtractor
 from ingestion_service.core.ocr.tesseract_ocr import TesseractOCR
+#from ingestion_service.core.ocr.paddle_ocr import PaddleOCRExtractor
 
-# Register OCR engines here
+# Create single instances (heavy models) and reuse
+tesseract_ocr = TesseractOCR()
+#paddle_ocr = PaddleOCRExtractor()
+
 OCR_ENGINES: Dict[str, OCRExtractor] = {
-    TesseractOCR.name: TesseractOCR(),
+    TesseractOCR.name: tesseract_ocr,  # "tesseract"
+    #PaddleOCRExtractor.name: paddle_ocr,  # "paddle"
 }
 
 
@@ -17,8 +22,8 @@ def get_ocr_engine(name: str = "tesseract") -> OCRExtractor:
     Return an OCR engine instance by name.
     Defaults to environment variable OCR_PROVIDER or 'tesseract'.
     """
-    ocr_name = name or os.getenv("OCR_PROVIDER", "tesseract")
-    engine = OCR_ENGINES.get(ocr_name.lower())
+    ocr_name = (name or os.getenv("OCR_PROVIDER", "tesseract")).lower()
+    engine = OCR_ENGINES.get(ocr_name)
     if not engine:
         raise ValueError(f"OCR engine '{ocr_name}' is not registered")
     return engine
