@@ -22,8 +22,9 @@ services:
       DATABASE_URL: postgresql://ingestion_user:ingestion_pass@postgres:5432/ingestion_test
       PYTHONPATH: /app/src
       EMBEDDING_PROVIDER: ollama
-    volumes:
-      - ./src/ingestion_service:/app/src/ingestion_service
+  # volumes:
+  #   - ./src/ingestion_service:/app/src/ingestion_service
+  # Commented out for testing/CI to avoid hiding dependencies installed in the image
     depends_on:
       postgres:
         condition: service_healthy
